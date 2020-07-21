@@ -12,9 +12,13 @@ def post_new_channels(token, post_channel):
         post_channel (string): Channel to post announcements to.
     """
     slack = slackclient.SlackClient(token)
-
-    response = slack.api_call('channels.list')
-    channels = response.get('channels')
+    response = slack.api_call('conversations.list', limit=1000, types="public_channel")
+    cursor = response['response_metadata']['next_cursor']
+    channels = response['channels']
+    while cursor:
+        response = slack.api_call('conversations.list', limit=1000, types="public_channel", cursor=cursor)
+        cursor = response['response_metadata']['next_cursor']
+        channels += response['channels']
 
     for channel in channels:
         created = datetime.datetime.utcfromtimestamp(channel['created'])
@@ -41,5 +45,5 @@ def post_new_channels(token, post_channel):
 if __name__ == "__main__":
     post_new_channels(
         os.environ.get('SLACK_BOT_TOKEN'),
-        os.environ.get("SLACK_POST_CHANNEL", "#general")
+        os.environ.get("SLACK_POST_CHANNEL", "#_alerts_test")
     )
